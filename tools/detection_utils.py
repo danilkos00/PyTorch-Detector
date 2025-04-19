@@ -1,10 +1,11 @@
 import torchvision.ops as ops
 import torch
 from torch.nn import functional as F
-from torchvisions.ops import box_convert
+from torchvision.ops import box_convert
 from torchvision.utils import draw_bounding_boxes
 from albumentations import Resize
 import matplotlib.pyplot as plt
+
 
 def nms(pred_boxes, confidences, iou_threshold=0.5, score_threshold=0.5):
     """
