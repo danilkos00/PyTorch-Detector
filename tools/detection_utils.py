@@ -7,6 +7,34 @@ from albumentations import Resize
 import matplotlib.pyplot as plt
 
 def nms(pred_boxes, confidences, iou_threshold=0.5, score_threshold=0.5):
+    """
+    Perform Non-Maximum Suppression (NMS) on object detection predictions.
+
+    Parameters
+    ----------
+    pred_boxes : torch.Tensor
+        Predicted bounding boxes in format [cx,cy,w,h].
+        Shape: [B, N, 4] where B is the batch size, N is the number of boxes.
+    confidences : torch.Tensor
+        Confidence scores for each predicted box (typically class probabilities).
+        Shape: [B, N, C] where B is the batch size, N is number of boxes and C is number of classes.
+    iou_threshold : float, optional
+        Intersection-over-Union threshold for box suppression (default: 0.5).
+        Boxes with IoU > threshold with a higher-scoring box will be suppressed.
+    score_threshold : float, optional
+        Minimum confidence score to consider a box (default: 0.5).
+        Boxes with confidence < threshold are discarded before NMS.
+
+    Returns
+    -------
+    list[dict]
+        A list where each element is a dictionary containing filtered predictions
+        for a class, with keys:
+        - 'boxes': torch.Tensor of shape [M, 4] (filtered boxes in [cx,cy,w,h] format)
+        - 'scores': torch.Tensor of shape [M] (confidence scores for kept boxes)
+        - 'labels': torch.Tensor of shape [M] (class labels as long integers)
+        where M is the number of boxes remaining after NMS for that class.
+    """
     device = pred_boxes.device
     confidences = F.softmax(confidences, dim=-1)
 
@@ -113,6 +141,18 @@ def imshow(image, bboxes=None, color='green', box_width=1):
 
 
 def show_preds(model, dataset, num_images=1):
+    """
+    Visualize model predictions on random images from a dataset with matplotlib.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        Trained detection model that implements a forward pass returning predictions.
+    dataset : torch.utils.data.Dataset
+        Dataset object containing images and annotations.
+    num_images : int, optional
+        Number of random images to display (default: 1)
+    """
     model.eval()
     device = next(model.parameters()).device
     m = len(dataset)

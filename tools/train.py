@@ -4,35 +4,49 @@ import torch
 from tqdm import tqdm
 from torchmetrics.detection import MeanAveragePrecision
 from torch import nn
-from tools
+from tools.detection_utils import nms
 
 
 def _display_grad(model):
     total_norm = 0
     max_grad = 0
-    count = 0
 
     for p in model.parameters():
         if p.grad is not None:
             param_norm = p.grad.data.norm(2)
             total_norm += param_norm.item() ** 2
             max_grad = max(max_grad, p.grad.data.abs().max().item())
-            count += 1
 
     total_norm = total_norm ** 0.5
     return total_norm, max_grad
 
 
-def train(model, optimizer, dataloaders, num_epochs, device):
+def train_model(model, optimizer, dataloaders, num_epochs):
+    """
+    Train model for a specified number of epochs with given optimizer and data loaders.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        The model to be trained.
+    optimizer : torch.optim.Optimizer
+        Optimization algorithm (e.g., Adam, SGD) for model parameter updates.
+    dataloaders : dict
+        Dictionary containing 'train' and 'val' DataLoader instances:
+        - 'train': DataLoader for training data
+        - 'val': DataLoader for validation data
+    num_epochs : int
+        Number of complete passes through the training dataset.
+    """
+    device = next(model.parameters()).device
     since = time.time()
-    best_map = 0.60
+    best_map = 0.0
     criterion = Loss(neg_ratio=1, loc_weight=1, cls_weight=1, iou_threshold=0.4, alpha=[250.0, 750.0], gamma=2.0)
 
     for epoch in range(num_epochs):
         print(f'Epoch: {epoch + 1}/{num_epochs}')
         print('-' * 10)
 
-        # for phase in ['val']:
         for phase in ['train', 'val']:
             if phase == 'train':
                 model.train()
@@ -85,9 +99,10 @@ def train(model, optimizer, dataloaders, num_epochs, device):
                 running_loc_loss += loc_loss * images.size(0)
                 running_loss += loss.item() * images.size(0)
 
-            epoch_loss = running_loss / len(datasets[phase])
-            epoch_loc_loss = running_loc_loss / len(datasets[phase])
-            epoch_cls_loss = running_cls_loss / len(datasets[phase])
+            epoch_loc_loss = running_loc_loss / (len(dataloaders[phase]) * dataloaders[phase].batch_size)
+            epoch_cls_loss = running_cls_loss / (len(dataloaders[phase]) * dataloaders[phase].batch_size)
+            epoch_loss = epoch_cls_loss + epoch_loc_loss
+
 
             if phase == 'val':
                 result = metric.compute()

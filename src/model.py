@@ -19,9 +19,9 @@ class L2NormLayer(nn.Module):
         return x_scaled
 
 
-class FaceDetector(nn.Module):
+class DetectorSSD(nn.Module):
     def __init__(self, num_classes):
-        super(FaceDetector, self).__init__()
+        super(DetectorSSD, self).__init__()
 
         backbone = models.resnext50_32x4d(weights=None)
 
