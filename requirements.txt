@@ -1,0 +1,10 @@
+torch
+tqdm
+glob
+matplotlib
+gdown
+kagglehub
+numpy
+torchvision
+albumentations
+torchmetrics[detection]
