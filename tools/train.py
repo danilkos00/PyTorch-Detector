@@ -21,9 +21,9 @@ def _display_grad(model):
     return total_norm, max_grad
 
 
-def train_model(model, optimizer, dataloaders, num_epochs):
+def train_model(model, optimizer, dataloaders, num_epochs, neg_ratio=3, iou_threshold=0.5):
     """
-    Train model for a specified number of epochs with given optimizer and data loaders.
+    Train model for a specified number of epochs with given optimizer, dataloaders and loss parameters.
 
     Parameters
     ----------
@@ -33,15 +33,20 @@ def train_model(model, optimizer, dataloaders, num_epochs):
         Optimization algorithm (e.g., Adam, SGD) for model parameter updates.
     dataloaders : dict
         Dictionary containing 'train' and 'val' DataLoader instances:
-        - 'train': DataLoader for training data
-        - 'val': DataLoader for validation data
+            - 'train': DataLoader for training data
+            - 'val': DataLoader for validation data
     num_epochs : int
         Number of complete passes through the training dataset.
+    neg_ratio : int, optional
+        The ratio of negative classes to positive classes for loss function (default: 3)
+    iuo_threshold : float, optional
+        The threshold of intersection over union for positive classes of the loss function (default: 0.5)
     """
+    was_in_training = model.training
+    criterion = Loss(neg_ratio=neg_ratio, iou_threshold=iou_threshold)
     device = next(model.parameters()).device
     since = time.time()
     best_map = 0.0
-    criterion = Loss(neg_ratio=1, loc_weight=1, cls_weight=1, iou_threshold=0.4, alpha=[250.0, 750.0], gamma=2.0)
 
     for epoch in range(num_epochs):
         print(f'Epoch: {epoch + 1}/{num_epochs}')
@@ -113,9 +118,10 @@ def train_model(model, optimizer, dataloaders, num_epochs):
         if result['map_50'].item() > best_map:
             best_map = result['map_50'].item()
             st = model.state_dict()
-            torch.save(st, f'FaceDetector_params_{result:.4f}.tar')
+            torch.save(st, f'FaceDetector_params_{result["map_50"].item():.4f}.tar')
 
         print('-' * 10)
 
+    model.train(was_in_training)
     time_elapsed = time.time() - since
     print(f'Training completed in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')

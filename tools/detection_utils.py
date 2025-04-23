@@ -80,9 +80,8 @@ def nms(pred_boxes, confidences, iou_threshold=0.5, score_threshold=0.5):
     return all_filtered
 
 
-def resize_back(image, bboxes, original_size, resize_size=300):
-    bboxes = box_convert(bboxes, 'cxcywh', 'xyxy') * resize_size
-    original_w, original_h = original_size
+def resize_back(bboxes, original_size, resize_size=300):
+    original_h, original_w = original_size
     scale = resize_size / max(original_h, original_w)
     resized_h = int(original_h * scale)
     resized_w = int(original_w * scale)
@@ -90,9 +89,8 @@ def resize_back(image, bboxes, original_size, resize_size=300):
     pad_y = (resize_size - resized_h) // 2
     pad_x = (resize_size - resized_w) // 2
 
-    cropped_image = image[:, pad_y:pad_y+resized_h, pad_x:pad_x+resized_w]
 
-    restored_image = Resize(original_h, original_w)(image=cropped_image.permute(1, 2, 0).numpy())['image']
+    bboxes = box_convert(bboxes, 'cxcywh', 'xyxy') * resize_size
 
     recovered_bboxes = []
     for bbox in bboxes:
@@ -113,27 +111,44 @@ def resize_back(image, bboxes, original_size, resize_size=300):
         ymin = max(0, min(ymin, original_h))
         ymax = max(0, min(ymax, original_h))
 
-        xmin /= restored_image.shape[1]
-        xmax /= restored_image.shape[1]
-        ymin /= restored_image.shape[0]
-        ymax /= restored_image.shape[0]
+        xmin /= original_w
+        xmax /= original_w
+        ymin /= original_h
+        ymax /= original_h
 
         recovered_bboxes.append([xmin, ymin, xmax, ymax])
 
     recovered_bboxes = box_convert(torch.tensor(recovered_bboxes), 'xyxy', 'cxcywh')
 
-    return torch.tensor(restored_image).permute(2, 0, 1), recovered_bboxes
+    return recovered_bboxes
 
 
-def imshow(image, bboxes=None, color='green', box_width=1):
+def imshow(image, bboxes=None, color='green', figsize=(5, 5), box_width=1):
+    """
+    Visualize image with matplotlib.
+
+    Parameters
+    ----------
+    image : torch.Tensor
+        image to display
+    bboxes : torch.Tensor, optional
+        Bounding boxes in for image in [cx, cy, w, h] format (default: None).
+    color : str, optional
+        Color of bounding boxes (defaul: 'green').
+    figsize : tuple[float, float], optional
+        Width, height for matplotlib figure (default: (5, 5)).
+    box_width : float, optianal
+        Width of bounding boxes (default: 1).
+    """
     mean = torch.tensor([0.485, 0.456, 0.406])
     std = torch.tensor([0.229, 0.224, 0.225])
     image = std * image.permute(1, 2, 0) + mean
+    plt.figure(figsize=figsize)
     if bboxes is not None:
         bboxes = box_convert(bboxes, 'cxcywh', 'xyxy')
         bboxes[..., [0, 2]] *= image.size(1)
         bboxes[..., [1, 3]] *= image.size(0)
-        image = draw_bounding_boxes(image.permute(2, 0, 1), bboxes, fill=False, colors=color, width=box_width)
+        image = draw_bounding_boxes(image.permute(2, 0, 1), bboxes, colors=color, width=box_width)
         plt.imshow(image.permute(1, 2, 0))
     else:
         plt.imshow(image)
@@ -141,7 +156,7 @@ def imshow(image, bboxes=None, color='green', box_width=1):
     plt.pause(0.01)
 
 
-def show_preds(model, dataset, num_images=1):
+def show_preds(model, dataset, num_images=1, color='blue', box_width=1):
     """
     Visualize model predictions on random images from a dataset with matplotlib.
 
@@ -153,16 +168,19 @@ def show_preds(model, dataset, num_images=1):
         Dataset object containing images and annotations.
     num_images : int, optional
         Number of random images to display (default: 1)
+    color : str, optional
+        Color of bounding boxes (default: 'blue')
+    box_width : float, optional
+        Width of bounding boxes (default: 1)
     """
     model.eval()
     device = next(model.parameters()).device
     m = len(dataset)
     for _ in range(num_images):
         i = torch.randint(m, (1,)).item()
-        print(i)
         with torch.no_grad():
             images, bboxes, classes = dataset[i]
             bboxes = bboxes.to(device)
             classes = classes.to(device)
             outputs = model(images.unsqueeze(0).to(device))
-            imshow(images, nms(outputs['pred_loc'], outputs['pred_classes'], 0.2, 0.5)[0]['boxes'], 'blue')
+            imshow(images, nms(outputs['pred_loc'], outputs['pred_classes'], 0.2, 0.5)[0]['boxes'], color=color, box_width=box_width)

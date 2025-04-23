@@ -42,10 +42,10 @@ def _get_transforms(train_or_val):
 
 
 class FacesDataset(data.Dataset):
-    def __init__(self, train=True, inference=False):
+    def __init__(self, train=True, return_original_img=False):
         train_or_val = 'train' if train else 'val'
         data_path = _load_images()
-        self.inference = inference
+        self.return_original_img = return_original_img
         self.images = glob(os.path.join(data_path, 'images', train_or_val, '*.jpg'))
         self.labels = []
 
@@ -55,23 +55,30 @@ class FacesDataset(data.Dataset):
 
         self.transforms = _get_transforms(train_or_val)
 
+        if return_original_img:
+            self.original_transforms = A.Compose([
+                A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ToTensorV2()
+            ])
+
+
     def __len__(self):
         return len(self.images)
 
     def __getitem__(self, idx):
         bboxes = []
         with Image.open(self.images[idx]) as img:
-            w = img.size[0]
-            h = img.size[1]
+            original_width = img.size[0]
+            original_height = img.size[1]
             image = np.array(img.convert('RGB'))
 
         with open(self.labels[idx], 'r') as f:
             for line in f.readlines():
                 x1, y1, x2, y2 = map(float, line.split()[2:])
-                x1 /= w
-                x2 /= w
-                y1 /= h
-                y2 /= h
+                x1 /= original_width
+                x2 /= original_width
+                y1 /= original_height
+                y2 /= original_height
 
                 bboxes.append([x1, y1, x2, y2])
 
@@ -82,7 +89,9 @@ class FacesDataset(data.Dataset):
         while len(data['bboxes']) < 1:
             data = self.transforms(image=image, bboxes=bboxes, labels=classes)   
 
-        if self.inference:
-            return data['image'], torch.tensor(data['bboxes'], dtype=torch.float32), torch.tensor(classes, dtype=torch.long), w, h
+        if self.return_original_img:
+            original_image = self.original_transforms(image=image)['image']
 
+            return data['image'], torch.tensor(data['bboxes'], dtype=torch.float32), torch.tensor(classes, dtype=torch.long), original_image
+        
         return data['image'], torch.tensor(data['bboxes'], dtype=torch.float32), torch.tensor(classes, dtype=torch.long)
