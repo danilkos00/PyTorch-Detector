@@ -2,7 +2,7 @@
 
 **PyTorch-Detector** is a neural network detector built on top of the SSD300 architecture using PyTorch. It is trained specifically for face detection tasks.
 
-## 🔥 Quick Start
+## Quick Start
 
 Launch the notebook directly in Google Colab:
 
@@ -27,7 +27,7 @@ Install all required packages via:
 pip install -r requirements.txt
 ```
 
-## 📁 Dataset
+## Dataset
 
 The project uses a face detection dataset from Kaggle:  
 [Face Detection Dataset](https://www.kaggle.com/datasets/fareselmenshawii/face-detection-dataset)
