@@ -39,10 +39,12 @@ When initializing the `FacesDataset` from `dataset/faces.py`, the face detection
 - **mAP@0.5**: **60%**
 - Visual examples below demonstrate real detections:
 
-![Example 1](examples/1.png)
-![Example 2](examples/2.png)
-![Example 3](examples/3.png)
-![Example 4](examples/4.png)
+<p float="left">
+  <img src="https://raw.githubusercontent.com/danilkos00/PyTorch-Detector/main/examples/1.png" width="200"/>
+  <img src="https://raw.githubusercontent.com/danilkos00/PyTorch-Detector/main/examples/2.png" width="200"/>
+  <img src="https://raw.githubusercontent.com/danilkos00/PyTorch-Detector/main/examples/3.png" width="200"/>
+  <img src="https://raw.githubusercontent.com/danilkos00/PyTorch-Detector/main/examples/4.png" width="200"/>
+</p>
 
 ## Pretrained Weights
 
